@@ -15,6 +15,7 @@
 package piper
 
 import (
+	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,7 +34,7 @@ type AppEnv struct {
 
 // newAppEnv creates a new instance of AppEnv which can be used to get
 // configuration, merge other config or unmarshal configuration to struct.
-func newAppEnv() *AppEnv {
+func newAppEnv(rs embed.FS) *AppEnv {
 	binPath, err := os.Executable()
 	if err != nil {
 		Panicf("create application environment fail: %v", err)
@@ -58,8 +59,7 @@ func newAppEnv() *AppEnv {
 	}
 
 	// we currently only support yaml config file
-	// TODO: filesystem
-	//env.vp.SetFs()
+	env.vp.SetFs(newResourceFs(rs))
 	env.vp.SetConfigType("yml")
 	env.vp.AddConfigPath(resourcesDir)
 	if wd != binDir {

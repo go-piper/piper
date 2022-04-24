@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -43,13 +44,18 @@ type graphNode struct {
 	name      string
 	ctorType  reflect.Type
 	ctorValue reflect.Value
+	lazyType  reflect.Type
 	provided  any
 
 	resolved     bool
 	instantiated bool
 	isCollection bool
+	isLazy       bool
 	dependencies []*graphNode
 }
+
+// Lazy represents lazy load for field.
+type Lazy[T any] func() T
 
 // _depTree will return the singleton global depTree to use.
 func _depTree() *depTree {
@@ -101,7 +107,7 @@ func Wire(providers ...any) {
 //
 // the field provider can only use:
 //
-//  piper.WireWithOption(&Otherthing{...}, piper.OutName("MyThing"))
+//  piper.WireWithOption(&Otherthing{...}, piper.NameOut("MyThing"))
 func WireWithOption(provider any, opts ...*WireOption) {
 	_depTree().wireWithOption(provider, opts...)
 }
@@ -110,24 +116,19 @@ func WireWithOption(provider any, opts ...*WireOption) {
 func Retrieve[T any](tp reflect.Type) []T {
 	var fields = make([]T, 0)
 	for _, v := range _depTree().retrieve(tp) {
-		fields = append(fields, v)
+		fields = append(fields, v.(T))
 	}
 
 	return fields
 }
 
-// LazyLoad will resolve the dependencies with `Lazy` options manually.
-func LazyLoad() {
-
-}
-
-func (c *depTree) wire(providers ...any) {
+func (dt *depTree) wire(providers ...any) {
 	for _, p := range providers {
-		c.wireWithOption(p)
+		dt.wireWithOption(p)
 	}
 }
 
-func (c *depTree) wireWithOption(provider any, opts ...*WireOption) {
+func (dt *depTree) wireWithOption(provider any, opts ...*WireOption) {
 	if provider == nil {
 		panic("pre process provider error: cannot be nil")
 	}
@@ -139,12 +140,12 @@ func (c *depTree) wireWithOption(provider any, opts ...*WireOption) {
 	providerType := reflect.TypeOf(provider)
 	providerKind := providerType.Kind()
 	if providerKind == reflect.Func {
-		c.buildFuncNode(provider, opts...)
+		dt.buildFuncNode(provider, opts...)
 	} else {
-		c.buildFieldNode(provider, opts...)
+		dt.buildFieldNode(provider, opts...)
 	}
 }
-func (c *depTree) validateWireOption(pType reflect.Type,
+func (dt *depTree) validateWireOption(pType reflect.Type,
 	actualName string, opts []*WireOption) error {
 	if len(opts) == 0 {
 		return nil
@@ -179,7 +180,7 @@ func (c *depTree) validateWireOption(pType reflect.Type,
 	return nil
 }
 
-func (c *depTree) splitOptions(opts []*WireOption) ([]*WireOption, *WireOption) {
+func (dt *depTree) splitOptions(opts []*WireOption) ([]*WireOption, *WireOption) {
 	inOpts := make([]*WireOption, 0)
 	var outOpt *WireOption
 
@@ -194,7 +195,7 @@ func (c *depTree) splitOptions(opts []*WireOption) ([]*WireOption, *WireOption) 
 	return inOpts, outOpt
 }
 
-func (c *depTree) nameOptValue(opt *WireOption) string {
+func (dt *depTree) nameOptValue(opt *WireOption) string {
 	if opt != nil {
 		return opt.name
 	}
@@ -202,7 +203,7 @@ func (c *depTree) nameOptValue(opt *WireOption) string {
 	return ""
 }
 
-func (c *depTree) defaultOptValue(opt *WireOption) any {
+func (dt *depTree) defaultOptValue(opt *WireOption) any {
 	if opt != nil {
 		return opt.defValue
 	}
@@ -210,11 +211,11 @@ func (c *depTree) defaultOptValue(opt *WireOption) any {
 	return nil
 }
 
-func (c *depTree) requiredOptValue(opt *WireOption) bool {
+func (dt *depTree) requiredOptValue(opt *WireOption) bool {
 	return opt != nil && opt.required
 }
 
-func (c *depTree) buildFieldNode(provider any, opts ...*WireOption) {
+func (dt *depTree) buildFieldNode(provider any, opts ...*WireOption) {
 	if len(opts) > 1 || len(opts) == 1 &&
 		(!opts[0].isWireOut() || opts[0].validate() != nil) {
 		panic("pre process instantiated provider error: only one " +
@@ -248,14 +249,14 @@ func (c *depTree) buildFieldNode(provider any, opts ...*WireOption) {
 	if len(opts) == 1 {
 		alias = opts[0].name
 	}
-	key := c.buildKey(field, alias)
-	savedNodes := c.providers[key]
+	key := dt.buildKey(field, alias)
+	savedNodes := dt.providers[key]
 	if savedNodes == nil {
 		savedNodes = make([]*graphNode, 0)
 	}
 
-	uuid := c.buildUuid(provider)
-	c.options[uuid] = opts
+	uuid := dt.buildUuid(provider)
+	dt.options[uuid] = opts
 
 	savedNodes = append(savedNodes, &graphNode{
 		id:           uuid,
@@ -264,10 +265,10 @@ func (c *depTree) buildFieldNode(provider any, opts ...*WireOption) {
 		instantiated: true,
 		provided:     provider,
 	})
-	c.providers[key] = savedNodes
+	dt.providers[key] = savedNodes
 }
 
-func (c *depTree) buildFuncNode(provider any, opts ...*WireOption) {
+func (dt *depTree) buildFuncNode(provider any, opts ...*WireOption) {
 	providerType := reflect.TypeOf(provider)
 	if providerType.NumOut() != 1 {
 		Panicf("pre process provider error: no or more than "+
@@ -281,25 +282,25 @@ func (c *depTree) buildFuncNode(provider any, opts ...*WireOption) {
 		return
 	}
 
-	if err := c.validateWireOption(providerType, fn.ActualName(), opts); err != nil {
+	if err := dt.validateWireOption(providerType, fn.ActualName(), opts); err != nil {
 		Panicf("validate wire option error: %v", err)
 		return
 	}
 
 	var alias string
-	_, outOpt := c.splitOptions(opts)
+	_, outOpt := dt.splitOptions(opts)
 	if outOpt != nil {
 		alias = outOpt.name
 	}
 
-	key := c.buildKey(fn.OutParam, alias)
-	savedNodes := c.providers[key]
+	key := dt.buildKey(fn.OutParam, alias)
+	savedNodes := dt.providers[key]
 	if savedNodes == nil {
 		savedNodes = make([]*graphNode, 0)
 	}
 
-	uuid := c.buildUuid(provider)
-	c.options[uuid] = opts
+	uuid := dt.buildUuid(provider)
+	dt.options[uuid] = opts
 
 	newNode := &graphNode{
 		id:        uuid,
@@ -309,13 +310,13 @@ func (c *depTree) buildFuncNode(provider any, opts ...*WireOption) {
 		ctorValue: fn.FuncValue,
 	}
 	savedNodes = append(savedNodes, newNode)
-	c.providers[key] = savedNodes
+	dt.providers[key] = savedNodes
 
 	// save unresolved node
-	c.unresolvedNodes = append(c.unresolvedNodes, newNode)
+	dt.unresolvedNodes = append(dt.unresolvedNodes, newNode)
 }
 
-func (c *depTree) buildKey(field *Field, alias string) providerKey {
+func (dt *depTree) buildKey(field *Field, alias string) providerKey {
 	return providerKey{
 		isPointer: field.IsPointer,
 		name:      field.ActualName(),
@@ -323,7 +324,7 @@ func (c *depTree) buildKey(field *Field, alias string) providerKey {
 	}
 }
 
-func (c *depTree) buildUuid(provider any) string {
+func (dt *depTree) buildUuid(provider any) string {
 	pValue := reflect.ValueOf(provider)
 	md5Hash := md5.New()
 	md5Hash.Write([]byte(fmt.Sprint(pValue.Pointer())))
@@ -331,16 +332,16 @@ func (c *depTree) buildUuid(provider any) string {
 	return hex.EncodeToString(md5Hash.Sum(nil))
 }
 
-func (c *depTree) active(node *graphNode) bool {
-	opts := c.options[node.id]
-	_, outOpt := c.splitOptions(opts)
+func (dt *depTree) active(node *graphNode) bool {
+	opts := dt.options[node.id]
+	_, outOpt := dt.splitOptions(opts)
 
 	if outOpt == nil || len(outOpt.profiles) == 0 {
 		return true
 	}
 
 	for _, p := range outOpt.profiles {
-		if p == c.profile {
+		if p == dt.profile {
 			return true
 		}
 	}
@@ -348,7 +349,7 @@ func (c *depTree) active(node *graphNode) bool {
 	return false
 }
 
-func (c *depTree) resolveNode(nodeToResolve *graphNode, depChain []*graphNode) error {
+func (dt *depTree) resolveNode(nodeToResolve *graphNode, depChain []*graphNode) error {
 	// if the node is resolved, do nothing
 	if nodeToResolve.resolved {
 		return nil
@@ -362,15 +363,29 @@ func (c *depTree) resolveNode(nodeToResolve *graphNode, depChain []*graphNode) e
 		return nil
 	}
 
-	opts := c.options[nodeToResolve.id]
-	inOpts, _ := c.splitOptions(opts)
+	opts := dt.options[nodeToResolve.id]
+	inOpts, _ := dt.splitOptions(opts)
 
 	for i := 0; i < ctorType.NumIn(); i++ {
 		inType := ctorType.In(i)
 		kind := inType.Kind()
+		isLazy := false
+		originInType := inType
+
 		if kind == reflect.Ptr {
 			kind = inType.Elem().Kind()
+		} else if kind == reflect.Func {
+			lazyOut := originInType.Out(0)
+			fn := reflect.FuncOf([]reflect.Type{}, []reflect.Type{lazyOut}, false)
+			// TODO: any other way to know 'Lazy'?
+			fullPkg := fmt.Sprintf("%s.%s", originInType.PkgPath(), originInType.Name())
+			if strings.HasPrefix(fullPkg, "github.com/go-piper/piper.Lazy") &&
+				inType.ConvertibleTo(fn) {
+				isLazy = true
+				inType = lazyOut
+			}
 		}
+
 		field, err := ParseFieldType(inType)
 		if err != nil {
 			return errors.New(fmt.Sprintf("%s: %s", err, nodeToResolve.name))
@@ -380,8 +395,8 @@ func (c *depTree) resolveNode(nodeToResolve *graphNode, depChain []*graphNode) e
 		if i < len(inOpts) {
 			inOpt = inOpts[i]
 		}
-		key := c.buildKey(field, c.nameOptValue(inOpt))
-		nodes, ok := c.providers[key]
+		key := dt.buildKey(field, dt.nameOptValue(inOpt))
+		nodes, ok := dt.providers[key]
 		if ok && len(nodes) != 0 {
 			if kind == reflect.Slice {
 				collectionNode := &graphNode{
@@ -391,12 +406,12 @@ func (c *depTree) resolveNode(nodeToResolve *graphNode, depChain []*graphNode) e
 				}
 				for _, node := range nodes {
 					// if the node is not active in current profile, ignore
-					if !c.active(node) {
+					if !dt.active(node) {
 						continue
 					}
 
 					// resolve child node
-					if err := c.resolveChildNode(node, append(depChain,
+					if err := dt.resolveChildNode(node, append(depChain,
 						nodeToResolve)); err != nil {
 						return err
 					}
@@ -408,8 +423,8 @@ func (c *depTree) resolveNode(nodeToResolve *graphNode, depChain []*graphNode) e
 				var primaryNode *graphNode
 				if len(nodes) > 1 {
 					for _, n := range nodes {
-						opts := c.options[n.id]
-						_, outOpt := c.splitOptions(opts)
+						opts := dt.options[n.id]
+						_, outOpt := dt.splitOptions(opts)
 						if outOpt != nil && outOpt.primary {
 							primaryNode = n
 							break
@@ -424,26 +439,39 @@ func (c *depTree) resolveNode(nodeToResolve *graphNode, depChain []*graphNode) e
 					primaryNode = nodes[0]
 				}
 
-				if !c.active(primaryNode) {
+				if !dt.active(primaryNode) {
 					return newNoDepError(key, nodeToResolve.name)
 				}
 
-				if err := c.resolveChildNode(primaryNode, append(depChain,
+				if err := dt.resolveChildNode(primaryNode, append(depChain,
 					nodeToResolve)); err != nil {
 					return err
+				}
+				_, outOpts := dt.splitOptions(dt.options[primaryNode.id])
+				if isLazy {
+					if outOpts == nil || !outOpts.lazy {
+						return errors.New(fmt.Sprintf("lazy options needed %s",
+							primaryNode.name))
+					}
+					primaryNode.isLazy = isLazy
+					primaryNode.lazyType = originInType
+				} else if kind != reflect.Func {
+					if outOpts != nil && outOpts.lazy {
+						return errors.New(fmt.Sprintf(
+							"lazy options need 'Lazy' to  call %s", primaryNode.name))
+					}
 				}
 				nodeToResolve.dependencies = append(nodeToResolve.dependencies, primaryNode)
 			}
 		} else {
 			// dependency is not found, try to get default
-			defVal := c.defaultOptValue(inOpt)
-			if c.requiredOptValue(inOpt) || defVal == nil {
+			defVal := dt.defaultOptValue(inOpt)
+			if dt.requiredOptValue(inOpt) || defVal == nil {
 				return newNoDepError(key, nodeToResolve.name)
 			}
 
 			defValType := reflect.TypeOf(defVal)
 			if defValType.Kind() == reflect.Func {
-				// TODO: add default func support
 				return errors.New("default value cannot be func")
 			}
 
@@ -465,7 +493,7 @@ func (c *depTree) resolveNode(nodeToResolve *graphNode, depChain []*graphNode) e
 			}
 
 			nodeToResolve.dependencies = append(nodeToResolve.dependencies, &graphNode{
-				id:           c.buildUuid(defVal),
+				id:           dt.buildUuid(defVal),
 				name:         key.name,
 				resolved:     true,
 				instantiated: true,
@@ -479,13 +507,13 @@ func (c *depTree) resolveNode(nodeToResolve *graphNode, depChain []*graphNode) e
 	return nil
 }
 
-func (c *depTree) resolveChildNode(node *graphNode, chain []*graphNode) error {
+func (dt *depTree) resolveChildNode(node *graphNode, chain []*graphNode) error {
 	if !node.resolved {
 		if err := cycleDependencyCheck(chain, node); err != nil {
 			return err
 		}
 
-		if err := c.resolveNode(node, chain); err != nil {
+		if err := dt.resolveNode(node, chain); err != nil {
 			return err
 		}
 	}
@@ -493,26 +521,27 @@ func (c *depTree) resolveChildNode(node *graphNode, chain []*graphNode) error {
 	return nil
 }
 
-func (c *depTree) resolveDependencies() error {
-	for _, nodeToResolve := range c.unresolvedNodes {
-		if err := c.resolveNode(nodeToResolve, make([]*graphNode, 0)); err != nil {
+func (dt *depTree) resolveDependencies() error {
+	for _, nodeToResolve := range dt.unresolvedNodes {
+		if err := dt.resolveNode(nodeToResolve, make([]*graphNode, 0)); err != nil {
 			return err
 		}
 	}
 
 	// clear unused resource
-	c.unresolvedNodes = nil
+	dt.unresolvedNodes = nil
 
-	for _, nodes := range c.providers {
+	for _, nodes := range dt.providers {
 		for _, node := range nodes {
-			c.graphNodes = append(c.graphNodes, node)
+			dt.graphNodes = append(dt.graphNodes, node)
+			dt.instantiate(node)
 		}
 	}
 
 	return nil
 }
 
-func (c *depTree) matchType(node *graphNode, fieldType reflect.Type) bool {
+func (dt *depTree) matchType(node *graphNode, fieldType reflect.Type) bool {
 	ctorType := node.ctorType
 	var outType reflect.Type
 	if ctorType != nil {
@@ -540,8 +569,8 @@ func (c *depTree) matchType(node *graphNode, fieldType reflect.Type) bool {
 	return outType.Implements(fieldType)
 }
 
-func (c *depTree) instantiate(node *graphNode) {
-	if !node.resolved {
+func (dt *depTree) instantiate(node *graphNode) {
+	if !node.resolved || node.instantiated {
 		return
 	}
 
@@ -549,7 +578,7 @@ func (c *depTree) instantiate(node *graphNode) {
 		if dep.instantiated {
 			continue
 		}
-		c.instantiate(dep)
+		dt.instantiate(dep)
 	}
 
 	in := make([]reflect.Value, 0)
@@ -558,7 +587,7 @@ func (c *depTree) instantiate(node *graphNode) {
 			if child.instantiated {
 				continue
 			}
-			c.instantiate(child)
+			dt.instantiate(child)
 		}
 		node.instantiated = true
 		return
@@ -567,38 +596,61 @@ func (c *depTree) instantiate(node *graphNode) {
 		numIn := node.ctorType.NumIn()
 		for i := 0; i < numIn; i++ {
 			depNode := node.dependencies[i]
-			if depNode.isCollection {
-				collectionIn := reflect.New(depNode.ctorType).Elem()
-				for _, child := range depNode.dependencies {
-					childKind := reflect.TypeOf(child.provided).Kind()
-					childValue := reflect.ValueOf(child.provided)
-					if childKind == reflect.Slice {
-						collectionIn = reflect.AppendSlice(collectionIn, childValue)
-					} else {
-						collectionIn = reflect.Append(collectionIn, childValue)
-					}
-				}
-				in = append(in, collectionIn)
-			} else {
+			if !depNode.isCollection {
 				in = append(in, reflect.ValueOf(depNode.provided))
+				continue
 			}
+
+			collectionIn := reflect.New(depNode.ctorType).Elem()
+			for _, child := range depNode.dependencies {
+				childKind := reflect.TypeOf(child.provided).Kind()
+				childValue := reflect.ValueOf(child.provided)
+				if childKind == reflect.Slice {
+					collectionIn = reflect.AppendSlice(collectionIn, childValue)
+				} else {
+					collectionIn = reflect.Append(collectionIn, childValue)
+				}
+			}
+			in = append(in, collectionIn)
 		}
 	}
 
-	// instantiates the node with parameters
-	out := node.ctorValue.Call(in)
-	node.provided = out[0].Interface()
+	if node.isLazy {
+		node.provided = dt.lazyInstantiate(node, in)
+	} else {
+		// instantiates the node with parameters
+		out := node.ctorValue.Call(in)
+		node.provided = out[0].Interface()
+	}
 	node.instantiated = true
 }
 
-func (c *depTree) retrieve(tp reflect.Type) []any {
+func (dt *depTree) lazyInstantiate(node *graphNode, in []reflect.Value) any {
+	ctorValue := node.ctorValue
+	var instantiated = false
+	var value reflect.Value
+	proxyFn := reflect.MakeFunc(node.lazyType, func(args []reflect.Value) []reflect.Value {
+		if !instantiated {
+			value = reflect.ValueOf(ctorValue.Call(in)[0].Interface())
+		}
+
+		return []reflect.Value{value}
+	})
+
+	lazyFn := reflect.New(node.lazyType)
+	lazyFn.Elem().Set(proxyFn)
+
+	return lazyFn.Elem().Interface()
+}
+
+func (dt *depTree) retrieve(tp reflect.Type) []any {
 	var fields = make([]any, 0)
 	var orderedFields = make([]any, 0)
 
-	for _, node := range c.graphNodes {
-		if c.matchType(node, tp) {
+	for _, node := range dt.graphNodes {
+		if dt.matchType(node, tp) {
 			if !node.instantiated {
-				c.instantiate(node)
+				dt.instantiate(node)
 			}
 			// check again after instantiating
 			if node.instantiated {

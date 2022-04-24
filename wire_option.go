@@ -63,9 +63,9 @@ func Out() *WireOption {
 	})
 }
 
-// Name is a convenient func which returns WireOption with name option.
+// NameIn is a convenient func which returns WireOption with name option.
 // This func alias to In().Name(name string).
-func Name(name string) *WireOption {
+func NameIn(name string) *WireOption {
 	return applyOption(func(option *WireOption) {
 		option.name = name
 		option.wireType = wireIn
@@ -100,16 +100,17 @@ func Active(profiles ...string) *WireOption {
 	})
 }
 
-func Lazy() *WireOption {
+// LazyOut is convenient func which returns WireOption with lazy option.
+func LazyOut() *WireOption {
 	return applyOption(func(option *WireOption) {
 		option.lazy = true
 		option.wireType = wireOut
 	})
 }
 
-// OutName is a convenient func which returns WireOption with name option and out
+// NameOut is a convenient func which returns WireOption with name option and out
 // parameter type. This func alias to Out().Name(name string).
-func OutName(name string) *WireOption {
+func NameOut(name string) *WireOption {
 	return applyOption(func(option *WireOption) {
 		option.name = name
 		option.wireType = wireOut

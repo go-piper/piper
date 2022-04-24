@@ -18,8 +18,8 @@ import (
 	"strings"
 )
 
-// CheckNotEmpty checks if the reference is empty string.
-func CheckNotEmpty(reference string) string {
+// NotEmpty checks if the reference is empty string.
+func NotEmpty(reference string) string {
 	if len(strings.TrimSpace(reference)) == 0 {
 		panic("the string is empty")
 	}
@@ -27,11 +27,11 @@ func CheckNotEmpty(reference string) string {
 	return reference
 }
 
-// CheckNotNil check if the reference is nil.
-func CheckNotNil[T any](reference T, msg string) T {
-	if reference == nil {
-		panic(msg)
-	}
+// NotNil check if the reference is nil.
+func NotNil[T any](reference T, msg string) T {
+	//if reference == nil {
+	//	panic(msg)
+	//}
 
 	return reference
 }

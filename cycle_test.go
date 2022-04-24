@@ -80,7 +80,6 @@ var _ = Describe("cycle dependency", func() {
 		depChain = append(depChain, nodeC)
 
 		err := cycleDependencyCheck(depChain, nodeA)
-		//noinspection GoNilness
 		Expect(err.Error()).To(Equal("cycle dependencies found: \n\t" +
 			"github.com/go-piper/piper.newCycleA\n\t" +
 			"depends on github.com/go-piper/piper.newCycleB\n\t" +

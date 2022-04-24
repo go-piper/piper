@@ -31,16 +31,12 @@ type resourceFs struct {
 	memFs afero.Fs
 }
 
-// memFs will be used to store embedded resources
-var memFs = afero.NewMemMapFs()
-
 // newResourceFs creates a new instance resourceFs.
-func newResourceFs(embed embed.FS) afero.Fs {
+func newResourceFs(embedRs embed.FS) afero.Fs {
 	return &resourceFs{
 		osFs:  afero.NewOsFs(),
-		memFs: afero.NewReadOnlyFs(memFs),
+		memFs: afero.NewReadOnlyFs(afero.FromIOFS{FS: embedRs}),
 	}
-
 }
 
 func (*resourceFs) Create(_ string) (afero.File, error) {
