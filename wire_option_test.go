@@ -44,7 +44,7 @@ var _ = Describe("wire option", func() {
 		}))
 	})
 	It("name", func() {
-		opt := Name("test")
+		opt := NameIn("test")
 		Expect(*opt).To(Equal(WireOption{
 			index:    0,
 			required: true,
@@ -62,7 +62,7 @@ var _ = Describe("wire option", func() {
 		}))
 	})
 	It("out name", func() {
-		opt := OutName("test")
+		opt := NameOut("test")
 		Expect(*opt).To(Equal(WireOption{
 			index:    0,
 			required: true,

@@ -100,7 +100,12 @@ func (c *cmdLine) run() error {
 	if err := _depTree().resolveDependencies(); err != nil {
 		return err
 	}
+
 	engine := c.engineFunc()
+
+	for _, l := range Retrieve[StartListener](reflect.TypeOf((*StartListener)(nil))) {
+		l.OnAppStart()
+	}
 
 	c.captureExit(func() {
 		for _, l := range Retrieve[StopListener](reflect.TypeOf((*StopListener)(nil))) {
@@ -108,10 +113,6 @@ func (c *cmdLine) run() error {
 			engine.Stop()
 		}
 	})
-
-	for _, l := range Retrieve[StartListener](reflect.TypeOf((*StartListener)(nil))) {
-		l.OnAppStart()
-	}
 
 	return engine.Start(c.env)
 }

@@ -125,7 +125,13 @@ func ParseFunc(fn any) (*Func, error) {
 	}
 
 	fptr := reflect.ValueOf(fn).Pointer()
-	pkgName, funcName := splitFuncName(runtime.FuncForPC(fptr).Name())
+	fullName := runtime.FuncForPC(fptr).Name()
+	pkgName, funcName := splitFuncName(fullName)
+
+	if strings.HasPrefix(funcName, "glob..func") {
+		// TODO: add func to get package and line
+		return nil, errors.New("closure function is not supported")
+	}
 
 	return &Func{
 		Package:   pkgName,

@@ -35,7 +35,7 @@ func init() {
 	Wire(&ApplicationProperty{})
 }
 
-// NewPiper creates a new instance of piper.
+// NewPiper creates a new piper to run application.
 func NewPiper(options ...func(*Option)) *Piper {
 	opt := &Option{}
 
@@ -43,8 +43,8 @@ func NewPiper(options ...func(*Option)) *Piper {
 		f(opt)
 	}
 
-	cli := newCmdLine(newAppEnv(), CheckNotNil(opt.EngineFunc, "EngineFunc is nil"),
-		CheckNotEmpty(opt.Description))
+	cli := newCmdLine(newAppEnv(opt.ResourceFs), NotNil(opt.EngineFunc, "EngineFunc is nil"),
+		NotEmpty(opt.Description))
 	banner := opt.Banner
 	if banner == nil {
 		banner = NewDefaultBanner()

@@ -34,7 +34,7 @@ const (
 )
 
 // Panicf makes panic with format support.
-func Panicf(format string, a ...interface{}) {
+func Panicf(format string, a ...any) {
 	err := fmt.Sprintf(format, a...)
 	panic(err)
 }
