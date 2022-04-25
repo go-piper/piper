@@ -18,23 +18,23 @@ import (
 	"os"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestHelper(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "helper test")
+	RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "helper test")
 }
 
-var _ = Describe("helper", func() {
+var _ = ginkgo.Describe("helper", func() {
 	_ = os.Setenv("ENV_C", "gotC")
 
-	It("expand env default", func() {
+	ginkgo.It("expand ctx default", func() {
 		s := ExpandEnv("${ENV_A:-${ENV_B:-notexist}}")
 		Expect(s).To(Equal("notexist"))
 	})
-	It("expand env", func() {
+	ginkgo.It("expand ctx", func() {
 		s := ExpandEnv("${ENV_A:-${ENV_C:-notexist}}")
 		Expect(s).To(Equal("gotC"))
 	})

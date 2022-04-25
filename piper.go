@@ -16,6 +16,9 @@ package piper
 
 import (
 	"embed"
+	"fmt"
+
+	"github.com/spf13/cobra"
 )
 
 // Piper defines a piper application.
@@ -24,7 +27,6 @@ type Piper struct {
 }
 
 type Option struct {
-	ShowVersion bool
 	Description string
 	Banner      Banner
 	EngineFunc  EngineFunc
@@ -43,8 +45,8 @@ func NewPiper(options ...func(*Option)) *Piper {
 		f(opt)
 	}
 
-	cli := newCmdLine(newAppEnv(opt.ResourceFs), NotNil(opt.EngineFunc, "EngineFunc is nil"),
-		NotEmpty(opt.Description))
+	cli := newCmdLine(newContext(opt.ResourceFs), NotNil[EngineFunc](opt.EngineFunc,
+		"EngineFunc is nil"), NotEmpty(opt.Description))
 	banner := opt.Banner
 	if banner == nil {
 		banner = NewDefaultBanner()
@@ -56,8 +58,16 @@ func NewPiper(options ...func(*Option)) *Piper {
 	}
 }
 
+func (p *Piper) With(cmds ...*cobra.Command) *Piper {
+	p.cmdLine.AddCommand(cmds...)
+
+	return p
+}
+
 func (p *Piper) Run() {
-	p.cmdLine.Execute()
+	if err := p.cmdLine.Execute(); err != nil {
+		fmt.Println(newAppStartError(err))
+	}
 }
 
 func (p *Piper) Execute() error {

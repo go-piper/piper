@@ -16,6 +16,7 @@ package piper
 
 import (
 	"fmt"
+	"github.com/coolerfall/slago"
 	"os"
 	"os/signal"
 	"reflect"
@@ -26,14 +27,14 @@ import (
 
 type cmdLine struct {
 	rootCmd    *cobra.Command
-	env        *AppEnv
+	ctx        *Context
 	banner     Banner
 	engineFunc EngineFunc
 }
 
-func newCmdLine(env *AppEnv, engineFunc EngineFunc, shortDesc string) *cmdLine {
+func newCmdLine(ctx *Context, engineFunc EngineFunc, shortDesc string) *cmdLine {
 	rootCmd := &cobra.Command{
-		Use:           env.cmdName(),
+		Use:           ctx.cmdName(),
 		Short:         shortDesc,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -41,7 +42,7 @@ func newCmdLine(env *AppEnv, engineFunc EngineFunc, shortDesc string) *cmdLine {
 
 	return &cmdLine{
 		rootCmd:    rootCmd,
-		env:        env,
+		ctx:        ctx,
 		engineFunc: engineFunc,
 	}
 }
@@ -52,7 +53,7 @@ func (c *cmdLine) Init(banner Banner) {
 	// create start command
 	startCmd := c.newStartCmd()
 	startCmd.Flags().StringP(keyProfile, "p", "", "the profile to set")
-	err := c.env.vp.BindPFlag(keyProfile, startCmd.Flags().Lookup(keyProfile))
+	err := c.ctx.vp.BindPFlag(keyProfile, startCmd.Flags().Lookup(keyProfile))
 	if err != nil {
 		Panicf("initialize command line error %v", err)
 	}
@@ -62,6 +63,10 @@ func (c *cmdLine) Init(banner Banner) {
 	c.rootCmd.SetErr(stdOut)
 
 	c.rootCmd.AddCommand(c.newVersionCmd(), startCmd)
+}
+
+func (c *cmdLine) AddCommand(cmds ...*cobra.Command) {
+	c.rootCmd.AddCommand(cmds...)
 }
 
 // Execute executes the root command which will start the aplication.
@@ -82,13 +87,13 @@ func (c *cmdLine) newStartCmd() *cobra.Command {
 func (c *cmdLine) newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: fmt.Sprintf("Show the version of %v", c.env.cmdName()),
+		Short: fmt.Sprintf("Show the version of %v", c.ctx.cmdName()),
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Printf(""+
 				"Go version:        %v\n"+
 				"Version:           %v\n"+
 				"Git commit:        %v\n"+
-				"Build time:             %v\n",
+				"Build time:        %v\n",
 				runtime.Version(), Version, GitCommit, BuildTime)
 		},
 	}
@@ -114,7 +119,9 @@ func (c *cmdLine) run() error {
 		}
 	})
 
-	return engine.Start(c.env)
+	slago.LoggerC().Info().Msgf("{} app engine is going to start", engine.Name())
+
+	return engine.Start(c.ctx)
 }
 
 func (c *cmdLine) captureExit(stop func()) {

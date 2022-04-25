@@ -28,10 +28,10 @@ func NotEmpty(reference string) string {
 }
 
 // NotNil check if the reference is nil.
-func NotNil[T any](reference T, msg string) T {
-	//if reference == nil {
-	//	panic(msg)
-	//}
+func NotNil[T any](reference any, msg string) T {
+	if reference == nil {
+		panic(msg)
+	}
 
-	return reference
+	return reference.(T)
 }
