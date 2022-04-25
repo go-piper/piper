@@ -68,7 +68,7 @@ func LoggingSystem() *loggingSystem {
 }
 
 // Initialize logging system with console writer and debug level.
-func (l *loggingSystem) Initialize(env *AppEnv) (err error) {
+func (l *loggingSystem) Initialize(env *Context) (err error) {
 	if l.initialized {
 		slago.Logger().ResetWriter()
 	}

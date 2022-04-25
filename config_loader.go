@@ -28,7 +28,7 @@ type ConfigLoader interface {
 	Ordered
 
 	// Load config with specified profile.
-	Load(env *AppEnv) error
+	Load(ctx *Context) error
 }
 
 func init() {
@@ -43,22 +43,22 @@ func (s *applicationConfigLoader) Order() int {
 	return math.MinInt32 + 1
 }
 
-func (s *applicationConfigLoader) Load(env *AppEnv) error {
-	configName := env.ConfigName()
-	profile := env.Profile()
+func (s *applicationConfigLoader) Load(ctx *Context) error {
+	configName := ctx.ConfigName()
+	profile := ctx.Profile()
 	if len(profile) != 0 {
 		configName += "-" + profile
 	}
 
-	if err := s.readConfig(env, configName, false); err != nil {
+	if err := s.readConfig(ctx, configName, false); err != nil {
 		return err
 	}
 
 	// initialize logging after application config loaded
-	return LoggingSystem().Initialize(env)
+	return LoggingSystem().Initialize(ctx)
 }
 
-func (s *applicationConfigLoader) readConfig(env *AppEnv,
+func (s *applicationConfigLoader) readConfig(env *Context,
 	configName string, rollback bool) (err error) {
 	if err = env.mergeWith(configName); err == nil {
 		return nil
@@ -76,7 +76,7 @@ func (s *applicationConfigLoader) readConfig(env *AppEnv,
 	}
 }
 
-func (s *applicationConfigLoader) readError(env *AppEnv) error {
+func (s *applicationConfigLoader) readError(env *Context) error {
 	var profileConfigErrMsg = ""
 	if len(env.Profile()) != 0 {
 		profileConfigErrMsg = fmt.Sprintf(" or %v-%v.yml", env.ConfigName(), env.Profile())

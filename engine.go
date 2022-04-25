@@ -7,7 +7,7 @@ type AppEngine interface {
 	Name() string
 
 	// Start application engine.
-	Start(env *AppEnv) error
+	Start(ctx *Context) error
 
 	// Stop current application engine.
 	Stop()

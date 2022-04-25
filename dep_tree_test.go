@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
@@ -89,17 +89,17 @@ func mockDepTree() *depTree {
 }
 
 func TestDepTree(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "piper dep tree test")
+	RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "piper dep tree test")
 }
 
-var _ = Describe("private func", func() {
-	It("build key", func() {
+var _ = ginkgo.Describe("private func", func() {
+	ginkgo.It("build key", func() {
 		field, _ := ParseField(&fooTest{})
 		key := _depTree().buildKey(field, "")
 		Expect(key).To(Equal(providerKey{"github.com/go-piper/piper.fooTest", "", true}))
 	})
-	It("build uuid", func() {
+	ginkgo.It("build uuid", func() {
 		container := mockDepTree()
 		sUuid := container.buildUuid(&fooTest{})
 		fnUuid := container.buildUuid(newFooTest)
@@ -108,8 +108,8 @@ var _ = Describe("private func", func() {
 	})
 })
 
-var _ = Describe("public func", func() {
-	It("wire no dependency", func() {
+var _ = ginkgo.Describe("public func", func() {
+	ginkgo.It("wire no dependency", func() {
 		depTree := mockDepTree()
 		depTree.wire(newFooTest)
 		err := depTree.resolveDependencies()
@@ -119,7 +119,7 @@ var _ = Describe("public func", func() {
 				"found for github.com/go-piper/piper.newFooTest",
 		))
 	})
-	It("wire multiple dependencies", func() {
+	ginkgo.It("wire multiple dependencies", func() {
 		depTree := mockDepTree()
 		depTree.wire(&paramTest{}, &paramTest{})
 		depTree.wire(newFooTest)
@@ -129,7 +129,7 @@ var _ = Describe("public func", func() {
 			"more than one dependencies of *github.com/go-piper/piper.paramTest " +
 				"found for github.com/go-piper/piper.newFooTest"))
 	})
-	It("wire multiple dependencies with primary", func() {
+	ginkgo.It("wire multiple dependencies with primary", func() {
 		depTree := mockDepTree()
 		depTree.wire(&paramTest{})
 		depTree.wireWithOption(&paramTest{}, Primary())
@@ -137,13 +137,13 @@ var _ = Describe("public func", func() {
 		err := depTree.resolveDependencies()
 		Expect(err).To(BeNil())
 	})
-	It("wire with default option", func() {
+	ginkgo.It("wire with default option", func() {
 		depTree := mockDepTree()
 		depTree.wireWithOption(newFooDefTest, Default(&paramDefTest{}))
 		err := depTree.resolveDependencies()
 		Expect(err).To(BeNil())
 	})
-	It("wire with error default option", func() {
+	ginkgo.It("wire with error default option", func() {
 		depTree := mockDepTree()
 		depTree.wireWithOption(newFooDefTest, Default(&paramTest{}))
 		err := depTree.resolveDependencies()
@@ -153,13 +153,13 @@ var _ = Describe("public func", func() {
 				"\n\tis not match *github.com/go-piper/piper.paramDefTest" +
 				"\n\tin github.com/go-piper/piper.newFooDefTest"))
 	})
-	It("wire with func default option", func() {
+	ginkgo.It("wire with func default option", func() {
 		depTree := mockDepTree()
 		depTree.wireWithOption(newIntfDefaultTest, Default(newIntfTest()))
 		err := depTree.resolveDependencies()
 		Expect(err).To(BeNil())
 	})
-	It("wire without name", func() {
+	ginkgo.It("wire without name", func() {
 		depTree := mockDepTree()
 		depTree.wire(&paramTest{})
 		depTree.wireWithOption(newFooTest)
@@ -170,7 +170,7 @@ var _ = Describe("public func", func() {
 			"no dependency of *github.com/go-piper/piper.fooTest(myfoo) " +
 				"found for github.com/go-piper/piper.newBarTest"))
 	})
-	It("wire with name", func() {
+	ginkgo.It("wire with name", func() {
 		depTree := mockDepTree()
 		depTree.wire(&paramTest{})
 		depTree.wireWithOption(newFooTest, NameOut("foo"))
@@ -178,7 +178,7 @@ var _ = Describe("public func", func() {
 		err := depTree.resolveDependencies()
 		Expect(err).To(BeNil())
 	})
-	It("wire with profiles", func() {
+	ginkgo.It("wire with profiles", func() {
 		depTree := mockDepTree()
 		depTree.profile = "test"
 		depTree.wireWithOption(newFooTest, Active("dev", "test"))
@@ -186,7 +186,7 @@ var _ = Describe("public func", func() {
 		err := depTree.resolveDependencies()
 		Expect(err).To(BeNil())
 	})
-	It("wire with error profiles", func() {
+	ginkgo.It("wire with error profiles", func() {
 		depTree := mockDepTree()
 		depTree.profile = "dev"
 		depTree.wireWithOption(newFooTest, Active("test"))
@@ -194,7 +194,7 @@ var _ = Describe("public func", func() {
 		err := depTree.resolveDependencies()
 		Expect(err).NotTo(BeNil())
 	})
-	It("get struct", func() {
+	ginkgo.It("get struct", func() {
 		depTree := mockDepTree()
 		depTree.wire(&paramTest{})
 		_ = depTree.resolveDependencies()
@@ -206,7 +206,7 @@ var _ = Describe("public func", func() {
 		}
 		Expect(1).To(Equal(len(paramTests)))
 	})
-	It("get interface", func() {
+	ginkgo.It("get interface", func() {
 		depTree := mockDepTree()
 		depTree.wire(newIntfTest())
 		_ = depTree.resolveDependencies()
@@ -218,7 +218,7 @@ var _ = Describe("public func", func() {
 		}
 		Expect(1).To(Equal(len(intfTests)))
 	})
-	It("wire primitive type", func() {
+	ginkgo.It("wire primitive type", func() {
 		depTree := mockDepTree()
 		var primitiveStr = "this is string"
 		var primitiveInt = 2
@@ -245,7 +245,7 @@ var _ = Describe("public func", func() {
 		}
 		Expect(1).To(Equal(len(primitiveTests)))
 	})
-	It("wire lazy", func() {
+	ginkgo.It("wire lazy", func() {
 		depTree := mockDepTree()
 		depTree.wire(&paramTest{})
 		depTree.wireWithOption(newFooTest, LazyOut())

@@ -17,7 +17,7 @@ package piper
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
@@ -43,12 +43,12 @@ func newCycleC(_ *cycleA) *cycleC {
 }
 
 func TestCycleDependency(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "cycle dependency test")
+	RegisterFailHandler(ginkgo.Fail)
+	ginkgo.RunSpecs(t, "cycle dependency test")
 }
 
-var _ = Describe("cycle dependency", func() {
-	It("error detected", func() {
+var _ = ginkgo.Describe("cycle dependency", func() {
+	ginkgo.It("error detected", func() {
 		cycleAfn, _ := ParseFunc(newCycleA)
 		cycleBfn, _ := ParseFunc(newCycleB)
 		cycleCfn, _ := ParseFunc(newCycleC)
