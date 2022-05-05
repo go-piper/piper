@@ -68,7 +68,7 @@ func LoggingSystem() *loggingSystem {
 }
 
 // Initialize logging system with console writer and debug level.
-func (l *loggingSystem) Initialize(env *Context) (err error) {
+func (l *loggingSystem) Initialize(ctx *Context) (err error) {
 	if l.initialized {
 		slago.Logger().ResetWriter()
 	}
@@ -76,7 +76,7 @@ func (l *loggingSystem) Initialize(env *Context) (err error) {
 	var config = LoggingProperty{
 		Level: slago.DebugLevel.String(),
 	}
-	if err = env.Unmarshal("logging", &config); err != nil {
+	if err = ctx.Unmarshal("logging", &config); err != nil {
 		return err
 	}
 

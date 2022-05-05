@@ -18,7 +18,6 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -41,11 +40,6 @@ func newContext(rs embed.FS) *Context {
 		Panicf("fail to create piper context: %v", err)
 	}
 
-	wd, err := os.Getwd()
-	if err != nil {
-		Panicf("fail to create piper context: %v", err)
-	}
-
 	var binDir string
 	var cliName = binPath
 	index := strings.LastIndex(binPath, "/")
@@ -54,25 +48,23 @@ func newContext(rs embed.FS) *Context {
 		binDir = binPath[:index]
 	}
 
-	env := &Context{
+	ctx := &Context{
 		vp:      viper.New(),
 		cliName: cliName,
 	}
 
-	// we currently only support yaml config file
-	env.vp.SetFs(newResourceFs(rs))
-	env.vp.SetConfigType("yml")
-	env.vp.AddConfigPath(resourcesDir)
-	if wd != binDir {
-		env.vp.AddConfigPath(filepath.Join(filepath.Dir(binPath), resourcesDir))
-	}
+	// currently only support yaml config file
+	ctx.vp.SetConfigType("yml")
+	ctx.vp.SetFs(newResourceFs(rs))
+	// local config file
+	ctx.vp.AddConfigPath(binDir)
 	// this is used for embedded file system
-	env.vp.AddConfigPath(fmt.Sprintf("/%s/%s", resourcesDir, piper))
+	ctx.vp.AddConfigPath(piper)
 
 	// set default value
-	env.vp.SetDefault(fmt.Sprintf("%s.application.name", piper), fmt.Sprintf("%s-app", piper))
+	ctx.vp.SetDefault(fmt.Sprintf("%s.application.name", piper), fmt.Sprintf("%s-app", piper))
 
-	return env
+	return ctx
 }
 
 // cmdName returns the command line name of the executed bin.
