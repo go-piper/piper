@@ -31,7 +31,7 @@ type ConfigProperty interface {
 // Check StartListener interface if you want a callback before application started.
 type Initializer interface {
 	// Initialize will be invoked when the application is initializing.
-	Initialize(env *Context)
+	Initialize(ctx *Context)
 }
 
 // Ordered represents the priority of type. This can be used to control the initialization

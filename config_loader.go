@@ -58,31 +58,31 @@ func (s *applicationConfigLoader) Load(ctx *Context) error {
 	return LoggingSystem().Initialize(ctx)
 }
 
-func (s *applicationConfigLoader) readConfig(env *Context,
+func (s *applicationConfigLoader) readConfig(ctx *Context,
 	configName string, rollback bool) (err error) {
-	if err = env.mergeWith(configName); err == nil {
+	if err = ctx.mergeWith(configName); err == nil {
 		return nil
 	}
 
 	// if no default config file found, just return error
 	if rollback {
-		return s.readError(env)
+		return s.readError(ctx)
 	}
 
 	if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-		return s.readError(env)
+		return s.readError(ctx)
 	} else {
-		return s.readConfig(env, env.ConfigName(), true)
+		return s.readConfig(ctx, ctx.ConfigName(), true)
 	}
 }
 
-func (s *applicationConfigLoader) readError(env *Context) error {
+func (s *applicationConfigLoader) readError(ctx *Context) error {
 	var profileConfigErrMsg = ""
-	if len(env.Profile()) != 0 {
-		profileConfigErrMsg = fmt.Sprintf(" or %v-%v.yml", env.ConfigName(), env.Profile())
+	if len(ctx.Profile()) != 0 {
+		profileConfigErrMsg = fmt.Sprintf(" or %v-%v.yml", ctx.ConfigName(), ctx.Profile())
 	}
 	return errors.New(
 		fmt.Sprintf("no %v.yml%v config file found in resources, "+
 			"at least one config file should be presented",
-			env.ConfigName(), profileConfigErrMsg))
+			ctx.ConfigName(), profileConfigErrMsg))
 }

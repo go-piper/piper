@@ -106,12 +106,29 @@ func (c *cmdLine) run() error {
 		return err
 	}
 
-	engine := c.engineFunc()
+	// load all configuration
+	for _, loader := range Retrieve[ConfigLoader](reflect.TypeOf((*ConfigLoader)(nil))) {
+		if err := loader.Load(c.ctx); err != nil {
+			return err
+		}
+	}
+
+	// unmarshal properties for initialization purpose
+	for _, property := range Retrieve[ConfigProperty](reflect.TypeOf((*ConfigProperty)(nil))) {
+		if err := c.ctx.Unmarshal(property.Prefix(), property); err != nil {
+			return err
+		}
+	}
+
+	for _, i := range Retrieve[Initializer](reflect.TypeOf((*Initializer)(nil))) {
+		i.Initialize(c.ctx)
+	}
 
 	for _, l := range Retrieve[StartListener](reflect.TypeOf((*StartListener)(nil))) {
 		l.OnAppStart()
 	}
 
+	engine := c.engineFunc()
 	c.captureExit(func() {
 		for _, l := range Retrieve[StopListener](reflect.TypeOf((*StopListener)(nil))) {
 			l.OnAppStop()
@@ -119,7 +136,7 @@ func (c *cmdLine) run() error {
 		}
 	})
 
-	slago.LoggerC().Info().Msgf("{} app engine is going to start", engine.Name())
+	slago.LoggerC().Info().Msgf("{} app engine is starting", engine.Name())
 
 	return engine.Start(c.ctx)
 }

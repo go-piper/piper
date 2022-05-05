@@ -3,7 +3,7 @@
 package piper
 
 type AppEngine interface {
-	// Name of current server engine.
+	// Name the name of current application engine.
 	Name() string
 
 	// Start application engine.
