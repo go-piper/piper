@@ -75,6 +75,9 @@ func (l *loggingSystem) Initialize(ctx *Context) (err error) {
 
 	var config = LoggingProperty{
 		Level: slago.DebugLevel.String(),
+		Writers: []WriterProperty{
+			{Type: "console"},
+		},
 	}
 	if err = ctx.Unmarshal("logging", &config); err != nil {
 		return err
@@ -134,11 +137,7 @@ func (l *loggingSystem) Initialize(ctx *Context) (err error) {
 func (l *loggingSystem) makeConsoleWriter(wp WriterProperty) (slago.Writer, error) {
 	var encoder slago.Encoder
 	if wp.Encoder != nil {
-		var err error
-		encoder, err = l.makeEncoder(wp.Encoder)
-		if err != nil {
-			return nil, err
-		}
+		encoder = l.makeEncoder(wp.Encoder)
 	}
 
 	return slago.NewConsoleWriter(func(o *slago.ConsoleWriterOption) {
@@ -149,11 +148,7 @@ func (l *loggingSystem) makeConsoleWriter(wp WriterProperty) (slago.Writer, erro
 func (l *loggingSystem) makeFileWriter(wp WriterProperty) (slago.Writer, error) {
 	var encoder slago.Encoder
 	if wp.Encoder != nil {
-		var err error
-		encoder, err = l.makeEncoder(wp.Encoder)
-		if err != nil {
-			return nil, err
-		}
+		encoder = l.makeEncoder(wp.Encoder)
 	}
 
 	var rollingPolicy slago.RollingPolicy
@@ -188,7 +183,7 @@ func (l *loggingSystem) makeFileWriter(wp WriterProperty) (slago.Writer, error) 
 	}), nil
 }
 
-func (l *loggingSystem) makeEncoder(ep *EncoderProperty) (slago.Encoder, error) {
+func (l *loggingSystem) makeEncoder(ep *EncoderProperty) slago.Encoder {
 	var encoder slago.Encoder
 
 	switch ep.Type {
@@ -199,8 +194,8 @@ func (l *loggingSystem) makeEncoder(ep *EncoderProperty) (slago.Encoder, error) 
 			o.Layout = ep.Layout
 		})
 	default:
-		return nil, errors.New("unkown encoder for writer")
+		encoder = slago.NewPatternEncoder()
 	}
 
-	return encoder, nil
+	return encoder
 }

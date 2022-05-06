@@ -110,8 +110,8 @@ func newAppStartError(err error) *appStartError {
 
 func (e *appStartError) Error() string {
 	return "\n" +
-		"********************************" + "\n" +
-		"*   application start failed   *" + "\n" +
-		"********************************" + "\n\n" +
+		"**********************************" + "\n" +
+		"*    application start failed    *" + "\n" +
+		"**********************************" + "\n\n" +
 		e.err.Error()
 }
