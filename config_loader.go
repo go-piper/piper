@@ -15,7 +15,6 @@
 package piper
 
 import (
-	"errors"
 	"fmt"
 	"math"
 
@@ -39,18 +38,12 @@ func init() {
 type applicationConfigLoader struct {
 }
 
-func (s *applicationConfigLoader) Order() int {
+func (l *applicationConfigLoader) Order() int {
 	return math.MinInt32 + 1
 }
 
-func (s *applicationConfigLoader) Load(ctx *Context) error {
-	configName := ctx.ConfigName()
-	profile := ctx.Profile()
-	if len(profile) != 0 {
-		configName += "-" + profile
-	}
-
-	if err := s.readConfig(ctx, configName, false); err != nil {
+func (l *applicationConfigLoader) Load(ctx *Context) error {
+	if err := l.readConfig(ctx, ctx.ConfigName(), false); err != nil {
 		return err
 	}
 
@@ -58,31 +51,16 @@ func (s *applicationConfigLoader) Load(ctx *Context) error {
 	return LoggingSystem().Initialize(ctx)
 }
 
-func (s *applicationConfigLoader) readConfig(ctx *Context,
-	configName string, rollback bool) (err error) {
-	if err = ctx.mergeWith(configName); err == nil {
+func (l *applicationConfigLoader) readConfig(ctx *Context, name string, complete bool) error {
+	err := ctx.mergeWith(name)
+	if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		return err
+	}
+
+	// if config loaded completely, just return
+	if complete {
 		return nil
 	}
 
-	// if no default config file found, just return error
-	if rollback {
-		return s.readError(ctx)
-	}
-
-	if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-		return s.readError(ctx)
-	} else {
-		return s.readConfig(ctx, ctx.ConfigName(), true)
-	}
-}
-
-func (s *applicationConfigLoader) readError(ctx *Context) error {
-	var profileConfigErrMsg = ""
-	if len(ctx.Profile()) != 0 {
-		profileConfigErrMsg = fmt.Sprintf(" or %v-%v.yml", ctx.ConfigName(), ctx.Profile())
-	}
-	return errors.New(
-		fmt.Sprintf("no %v.yml%v config file found in resources, "+
-			"at least one config file should be presented",
-			ctx.ConfigName(), profileConfigErrMsg))
+	return l.readConfig(ctx, fmt.Sprintf("%s-%s", name, ctx.Profile()), true)
 }

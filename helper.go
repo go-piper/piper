@@ -27,10 +27,10 @@ var (
 )
 
 const (
-	resourcesDir  = "resources"
-	piper         = "piper"
-	keyProfile    = "profile"
-	keyConfigName = "config"
+	piper             = "piper"
+	keyProfile        = "profile"
+	keyConfigName     = "piper.config-name"
+	defaultConfigName = "application"
 )
 
 // Panicf makes panic with format support.

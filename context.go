@@ -63,6 +63,7 @@ func newContext(rs embed.FS) *Context {
 
 	// set default value
 	ctx.vp.SetDefault(fmt.Sprintf("%s.application.name", piper), fmt.Sprintf("%s-app", piper))
+	ctx.vp.SetDefault(keyConfigName, defaultConfigName)
 
 	return ctx
 }
