@@ -15,27 +15,20 @@
 package piper
 
 import (
-	"os"
-	"testing"
-
 	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
+	"os"
 )
-
-func TestHelper(t *testing.T) {
-	RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "helper test")
-}
 
 var _ = ginkgo.Describe("helper", func() {
 	_ = os.Setenv("ENV_C", "gotC")
 
 	ginkgo.It("expand ctx default", func() {
 		s := ExpandEnv("${ENV_A:-${ENV_B:-notexist}}")
-		Expect(s).To(Equal("notexist"))
+		gomega.Expect(s).To(gomega.Equal("notexist"))
 	})
 	ginkgo.It("expand ctx", func() {
 		s := ExpandEnv("${ENV_A:-${ENV_C:-notexist}}")
-		Expect(s).To(Equal("gotC"))
+		gomega.Expect(s).To(gomega.Equal("gotC"))
 	})
 })

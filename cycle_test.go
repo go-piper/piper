@@ -15,10 +15,8 @@
 package piper
 
 import (
-	"testing"
-
 	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 type cycleA struct {
@@ -40,11 +38,6 @@ func newCycleB(_ *cycleC) *cycleB {
 
 func newCycleC(_ *cycleA) *cycleC {
 	return &cycleC{}
-}
-
-func TestCycleDependency(t *testing.T) {
-	RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "cycle dependency test")
 }
 
 var _ = ginkgo.Describe("cycle dependency", func() {
@@ -80,7 +73,7 @@ var _ = ginkgo.Describe("cycle dependency", func() {
 		depChain = append(depChain, nodeC)
 
 		err := cycleDependencyCheck(depChain, nodeA)
-		Expect(err.Error()).To(Equal("cycle dependencies found: \n\t" +
+		gomega.Expect(err.Error()).To(gomega.Equal("cycle dependencies found: \n\t" +
 			"github.com/go-piper/piper.newCycleA\n\t" +
 			"depends on github.com/go-piper/piper.newCycleB\n\t" +
 			"depends on github.com/go-piper/piper.newCycleC\n\t" +

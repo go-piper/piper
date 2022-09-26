@@ -19,7 +19,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/coolerfall/slago"
+	"github.com/coolerfall/lork"
 )
 
 var (
@@ -47,8 +47,8 @@ type WriterProperty struct {
 }
 
 type EncoderProperty struct {
-	Type   string `piper:"type"`
-	Layout string `piper:"layout"`
+	Type    string `piper:"type"`
+	Pattern string `piper:"pattern"`
 }
 
 type RollingPolicyProperty struct {
@@ -70,11 +70,11 @@ func LoggingSystem() *loggingSystem {
 // Initialize logging system with console writer and debug level.
 func (l *loggingSystem) Initialize(ctx *Context) (err error) {
 	if l.initialized {
-		slago.Logger().ResetWriter()
+		lork.Logger().ResetWriter()
 	}
 
 	var config = LoggingProperty{
-		Level: slago.DebugLevel.String(),
+		Level: lork.DebugLevel.String(),
 		Writers: []WriterProperty{
 			{Type: "console"},
 		},
@@ -83,15 +83,15 @@ func (l *loggingSystem) Initialize(ctx *Context) (err error) {
 		return err
 	}
 
-	level := slago.ParseLevel(strings.ToUpper(config.Level))
-	slago.Logger().SetLevel(level)
+	level := lork.ParseLevel(strings.ToUpper(config.Level))
+	lork.Logger().SetLevel(level)
 
-	writers := make(map[string]slago.Writer)
+	writers := make(map[string]lork.Writer)
 	refWriters := make([]string, 0)
 
 	// config logging writters
 	for _, w := range config.Writers {
-		var writer slago.Writer
+		var writer lork.Writer
 
 		switch w.Type {
 		case "console":
@@ -102,7 +102,7 @@ func (l *loggingSystem) Initialize(ctx *Context) (err error) {
 			refWriters = append(refWriters, w.RefWriter)
 			continue
 		default:
-			return errors.New("unkown slago writer")
+			return errors.New("unkown lork writer")
 		}
 
 		if err != nil {
@@ -119,14 +119,14 @@ func (l *loggingSystem) Initialize(ctx *Context) (err error) {
 		}
 		delete(writers, name)
 
-		slago.Logger().AddWriter(slago.NewAsyncWriter(func(o *slago.AsyncWriterOption) {
+		lork.Logger().AddWriter(lork.NewAsyncWriter(func(o *lork.AsyncWriterOption) {
 			o.Ref = writer
 		}))
 	}
 
 	// add other writers
 	for _, w := range writers {
-		slago.Logger().AddWriter(w)
+		lork.Logger().AddWriter(w)
 	}
 
 	l.initialized = true
@@ -134,36 +134,36 @@ func (l *loggingSystem) Initialize(ctx *Context) (err error) {
 	return nil
 }
 
-func (l *loggingSystem) makeConsoleWriter(wp WriterProperty) (slago.Writer, error) {
-	var encoder slago.Encoder
+func (l *loggingSystem) makeConsoleWriter(wp WriterProperty) (lork.Writer, error) {
+	var encoder lork.Encoder
 	if wp.Encoder != nil {
 		encoder = l.makeEncoder(wp.Encoder)
 	}
 
-	return slago.NewConsoleWriter(func(o *slago.ConsoleWriterOption) {
+	return lork.NewConsoleWriter(func(o *lork.ConsoleWriterOption) {
 		o.Encoder = encoder
 	}), nil
 }
 
-func (l *loggingSystem) makeFileWriter(wp WriterProperty) (slago.Writer, error) {
-	var encoder slago.Encoder
+func (l *loggingSystem) makeFileWriter(wp WriterProperty) (lork.Writer, error) {
+	var encoder lork.Encoder
 	if wp.Encoder != nil {
 		encoder = l.makeEncoder(wp.Encoder)
 	}
 
-	var rollingPolicy slago.RollingPolicy
+	var rollingPolicy lork.RollingPolicy
 	if wp.RollingPolicy != nil {
 		policy := wp.RollingPolicy
 		switch policy.Type {
 		case "size-and-time-based":
-			rollingPolicy = slago.NewSizeAndTimeBasedRollingPolicy(
-				func(o *slago.SizeAndTimeBasedRPOption) {
+			rollingPolicy = lork.NewSizeAndTimeBasedRollingPolicy(
+				func(o *lork.SizeAndTimeBasedRPOption) {
 					o.FilenamePattern = policy.FilenamePattern
 					o.MaxFileSize = policy.MaxSize
 					o.MaxHistory = policy.MaxHistory
 				})
 		case "time-based":
-			rollingPolicy = slago.NewTimeBasedRollingPolicy(func(o *slago.TimeBasedRPOption) {
+			rollingPolicy = lork.NewTimeBasedRollingPolicy(func(o *lork.TimeBasedRPOption) {
 				o.FilenamePattern = policy.FilenamePattern
 				o.MaxHistory = policy.MaxHistory
 			})
@@ -172,7 +172,7 @@ func (l *loggingSystem) makeFileWriter(wp WriterProperty) (slago.Writer, error) 
 		}
 	}
 
-	return slago.NewFileWriter(func(o *slago.FileWriterOption) {
+	return lork.NewFileWriter(func(o *lork.FileWriterOption) {
 		o.Encoder = encoder
 		if len(wp.Filename) != 0 {
 			o.Filename = wp.Filename
@@ -183,18 +183,18 @@ func (l *loggingSystem) makeFileWriter(wp WriterProperty) (slago.Writer, error) 
 	}), nil
 }
 
-func (l *loggingSystem) makeEncoder(ep *EncoderProperty) slago.Encoder {
-	var encoder slago.Encoder
+func (l *loggingSystem) makeEncoder(ep *EncoderProperty) lork.Encoder {
+	var encoder lork.Encoder
 
 	switch ep.Type {
 	case "json":
-		encoder = slago.NewJsonEncoder()
+		encoder = lork.NewJsonEncoder()
 	case "pattern":
-		encoder = slago.NewPatternEncoder(func(o *slago.PatternEncoderOption) {
-			o.Layout = ep.Layout
+		encoder = lork.NewPatternEncoder(func(o *lork.PatternEncoderOption) {
+			o.Pattern = ep.Pattern
 		})
 	default:
-		encoder = slago.NewPatternEncoder()
+		encoder = lork.NewPatternEncoder()
 	}
 
 	return encoder
