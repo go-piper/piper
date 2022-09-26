@@ -16,25 +16,18 @@ package piper
 
 import (
 	"embed"
-	"testing"
-
 	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
 
 //go:embed rs_fs_test.yml
 var rs embed.FS
 
-func TestResourceFs(t *testing.T) {
-	RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "rs fs test")
-}
-
 var _ = ginkgo.Describe("rs fs", func() {
 	ginkgo.It("read", func() {
 		rsfs := newResourceFs(rs)
 		f, err := rsfs.Open("rs_fs_test.yml")
-		Expect(err).To(BeNil())
-		Expect(f.Name()).To(Equal("rs_fs_test.yml"))
+		gomega.Expect(err).To(gomega.BeNil())
+		gomega.Expect(f.Name()).To(gomega.Equal("rs_fs_test.yml"))
 	})
 })

@@ -16,12 +16,12 @@ package piper
 
 import (
 	"fmt"
-	"github.com/coolerfall/slago"
 	"os"
 	"os/signal"
 	"reflect"
 	"runtime"
 
+	"github.com/coolerfall/lork"
 	"github.com/spf13/cobra"
 )
 
@@ -136,7 +136,7 @@ func (c *cmdLine) run() error {
 		}
 	})
 
-	slago.LoggerC().Info().Msgf("{} app engine is starting", engine.Name())
+	lork.LoggerC().Info().Msgf("%s app engine is starting", engine.Name())
 
 	return engine.Start(c.ctx)
 }

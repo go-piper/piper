@@ -15,21 +15,14 @@
 package piper
 
 import (
-	"testing"
-
 	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 )
-
-func TestWireOption(t *testing.T) {
-	RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "wire option test")
-}
 
 var _ = ginkgo.Describe("wire option", func() {
 	ginkgo.It("in", func() {
 		opt := In()
-		Expect(*opt).To(Equal(WireOption{
+		gomega.Expect(*opt).To(gomega.Equal(WireOption{
 			index:    0,
 			required: true,
 			wireType: wireIn,
@@ -37,7 +30,7 @@ var _ = ginkgo.Describe("wire option", func() {
 	})
 	ginkgo.It("out", func() {
 		opt := Out()
-		Expect(*opt).To(Equal(WireOption{
+		gomega.Expect(*opt).To(gomega.Equal(WireOption{
 			index:    0,
 			required: true,
 			wireType: wireOut,
@@ -45,7 +38,7 @@ var _ = ginkgo.Describe("wire option", func() {
 	})
 	ginkgo.It("name", func() {
 		opt := NameIn("test")
-		Expect(*opt).To(Equal(WireOption{
+		gomega.Expect(*opt).To(gomega.Equal(WireOption{
 			index:    0,
 			required: true,
 			wireType: wireIn,
@@ -54,7 +47,7 @@ var _ = ginkgo.Describe("wire option", func() {
 	})
 	ginkgo.It("default", func() {
 		opt := Default("default")
-		Expect(*opt).To(Equal(WireOption{
+		gomega.Expect(*opt).To(gomega.Equal(WireOption{
 			index:    0,
 			required: false,
 			wireType: wireIn,
@@ -63,7 +56,7 @@ var _ = ginkgo.Describe("wire option", func() {
 	})
 	ginkgo.It("out name", func() {
 		opt := NameOut("test")
-		Expect(*opt).To(Equal(WireOption{
+		gomega.Expect(*opt).To(gomega.Equal(WireOption{
 			index:    0,
 			required: true,
 			wireType: wireOut,
@@ -72,7 +65,7 @@ var _ = ginkgo.Describe("wire option", func() {
 	})
 	ginkgo.It("in with other", func() {
 		opt := In().Name("test").Default("default")
-		Expect(*opt).To(Equal(WireOption{
+		gomega.Expect(*opt).To(gomega.Equal(WireOption{
 			index:    0,
 			required: false,
 			wireType: wireIn,
